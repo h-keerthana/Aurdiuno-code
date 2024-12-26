@@ -1,0 +1,20 @@
+#define FSR1_PIN 32 // Pin for first FSR (D32)
+#define FSR2_PIN 33 // Pin for second FSR (D33)
+
+void setup() {
+    Serial.begin(115200);
+    pinMode(FSR1_PIN, INPUT);
+    pinMode(FSR2_PIN, INPUT);
+}
+
+void loop() {
+    int fsr1Reading = analogRead(FSR1_PIN);
+    int fsr2Reading = analogRead(FSR2_PIN);
+
+    Serial.print("FSR1: ");
+    Serial.print(fsr1Reading);
+    Serial.print(" | FSR2: ");
+    Serial.println(fsr2Reading);
+
+    delay(1000); // Delay for readability
+}
