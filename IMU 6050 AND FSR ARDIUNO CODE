@@ -1,0 +1,125 @@
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <Wire.h>
+
+Adafruit_MPU6050 mpu;
+
+// FSR sensor pins
+int fsrPin1 = A0;    // First FSR sensor connected to A0
+int fsrPin2 = A1;    // Second FSR sensor connected to A1
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("MPU6050 and FSR Sensors Serial Monitor Demo");
+
+  // Initialize MPU6050
+  if (!mpu.begin()) {
+    Serial.println("Failed to find MPU6050 chip");
+    while (1) yield();
+  }
+  Serial.println("MPU6050 Found!");
+
+  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+  Serial.print("Accelerometer range set to: ");
+  switch (mpu.getAccelerometerRange()) {
+    case MPU6050_RANGE_2_G: Serial.println("+-2G"); break;
+    case MPU6050_RANGE_4_G: Serial.println("+-4G"); break;
+    case MPU6050_RANGE_8_G: Serial.println("+-8G"); break;
+    case MPU6050_RANGE_16_G: Serial.println("+-16G"); break;
+  }
+
+  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+  Serial.print("Gyro range set to: ");
+  switch (mpu.getGyroRange()) {
+    case MPU6050_RANGE_250_DEG: Serial.println("+- 250 deg/s"); break;
+    case MPU6050_RANGE_500_DEG: Serial.println("+- 500 deg/s"); break;
+    case MPU6050_RANGE_1000_DEG: Serial.println("+- 1000 deg/s"); break;
+    case MPU6050_RANGE_2000_DEG: Serial.println("+- 2000 deg/s"); break;
+  }
+
+  mpu.setFilterBandwidth(MPU6050_BAND_5_HZ);
+  Serial.print("Filter bandwidth set to: ");
+  switch (mpu.getFilterBandwidth()) {
+    case MPU6050_BAND_260_HZ: Serial.println("260 Hz"); break;
+    case MPU6050_BAND_184_HZ: Serial.println("184 Hz"); break;
+    case MPU6050_BAND_94_HZ: Serial.println("94 Hz"); break;
+    case MPU6050_BAND_44_HZ: Serial.println("44 Hz"); break;
+    case MPU6050_BAND_21_HZ: Serial.println("21 Hz"); break;
+    case MPU6050_BAND_10_HZ: Serial.println("10 Hz"); break;
+    case MPU6050_BAND_5_HZ: Serial.println("5 Hz"); break;
+  }
+
+  Serial.println();
+}
+
+void loop() {
+  // Get MPU6050 sensor events
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+
+  // Display MPU6050 accelerometer data
+  Serial.println("Accelerometer (m/s^2):");
+  Serial.print("X: "); Serial.print(a.acceleration.x, 1);
+  Serial.print(" Y: "); Serial.print(a.acceleration.y, 1);
+  Serial.print(" Z: "); Serial.println(a.acceleration.z, 1);
+
+  // Display MPU6050 gyroscope data
+  Serial.println("Gyroscope (rad/s):");
+  Serial.print("X: "); Serial.print(g.gyro.x, 1);
+  Serial.print(" Y: "); Serial.print(g.gyro.y, 1);
+  Serial.print(" Z: "); Serial.println(g.gyro.z, 1);
+
+  // Display temperature data
+  Serial.print("Temperature: ");
+  Serial.print(temp.temperature);
+  Serial.println(" °C");
+  Serial.println();
+
+  // Read FSR sensor data
+  processFSR(fsrPin1, "FSR 1");
+  processFSR(fsrPin2, "FSR 2");
+
+  Serial.println("--------------------");
+  delay(1000); // Delay to avoid flooding the Serial Monitor
+}
+
+void processFSR(int fsrPin, String label) {
+  int fsrReading = analogRead(fsrPin);
+  int fsrVoltage = map(fsrReading, 0, 1023, 0, 5000); // Map to mV
+
+  Serial.print(label);
+  Serial.print(" Analog reading = ");
+  Serial.println(fsrReading);
+
+  Serial.print(label);
+  Serial.print(" Voltage reading in mV = ");
+  Serial.println(fsrVoltage);
+
+  if (fsrVoltage == 0) {
+    Serial.print(label);
+    Serial.println(" No pressure detected.");
+  } else {
+    unsigned long fsrResistance = 5000 - fsrVoltage;
+    fsrResistance *= 10000;  // 10K resistor
+    fsrResistance /= fsrVoltage;
+
+    Serial.print(label);
+    Serial.print(" Resistance (ohms) = ");
+    Serial.println(fsrResistance);
+
+    unsigned long fsrConductance = 1000000 / fsrResistance;
+    Serial.print(label);
+    Serial.print(" Conductance (microMhos) = ");
+    Serial.println(fsrConductance);
+
+    long fsrForce;
+    if (fsrConductance <= 1000) {
+      fsrForce = fsrConductance / 80;
+    } else {
+      fsrForce = (fsrConductance - 1000) / 30;
+    }
+    Serial.print(label);
+    Serial.print(" Force (Newtons) = ");
+    Serial.println(fsrForce);
+  }
+}
